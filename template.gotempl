@@ -1,0 +1,112 @@
+{{$doc := .}}
+{{- define "template.Type" -}}
+{{- $sec := (index . 0)}}
+{{- $type := (index . 1)}}
+{{- $level := (index . 2)}}
+{{- range $type.Fields}}
+{{range $i := intRange 0 $level}}  {{end}}- `{{.Name}}` ({{if .Required}}required{{else}}optional{{end}}, {{.Type}}): {{.Description}}
+{{- if ne .Ref ""}}
+     {{- template "template.Type" (arr $sec ($sec.Type .Ref) (add $level 1))}}
+{{- end}}
+{{- end}}
+{{- end -}}
+# {{$doc.Name}}
+
+## Description
+{{$doc.Description}}
+
+## BaseURL
+`{{$doc.URL}}`
+
+## Endpoint
+`[{{$doc.Method}}] {{$doc.Endpoint}}`
+{{- if $doc.Headers}}
+
+### Headers
+```
+{{range $doc.Headers}}{{.}}
+{{end -}}
+```
+{{- end}}
+{{- if $doc.Param}}
+### Parameters
+{{$doc.Param.Description}}
+{{- template "template.Type" (arr $doc.Param (index $doc.Param.Types 0) 0)}}
+{{- if $doc.Param.Examples}}
+
+**Examples**
+{{- range $doc.Param.Examples}}
+
+{{.Name}}
+```json
+{{JSON .Data}}
+```
+{{- end}}
+
+{{- end}}
+{{- end}}
+{{- if $doc.Query}}
+### Query parameters
+{{- if $doc.Query.Types}}
+{{- template "template.Type" (arr $doc.Query (index $doc.Query.Types 0) 0)}}
+{{- end}}
+{{- if $doc.Query.Examples}}
+
+**Examples**
+{{- range $doc.Query.Examples}}
+
+{{.Name}}
+```json
+{{JSON .Data}}
+```
+{{- end}}
+{{- end}}
+{{- end}}
+{{- if $doc.Body}}
+### Body
+{{$doc.Body.Description}}
+{{- if $doc.Body.Types}}
+{{- template "template.Type" (arr $doc.Body (index $doc.Body.Types 0) 0)}}
+{{- end}}
+{{- if $doc.Body.Examples}}
+
+**Examples**
+{{- range $doc.Body.Examples}}
+
+{{.Name}}
+```json
+{{JSON .Data}}
+```
+{{- end}}
+{{- end}}
+{{- end}}
+
+{{- if $doc.Response}}
+### Response
+{{$doc.Response.Description}}
+{{- if $doc.Response.Types}}
+{{- template "template.Type" (arr $doc.Response (index $doc.Response.Types 0) 0)}}
+{{- end}}
+{{- if $doc.Response.Examples}}
+
+**Examples**
+{{- range $doc.Response.Examples}}
+
+{{.Name}}
+```json
+{{JSON .Data}}
+```
+{{- end}}
+{{- end}}
+{{- end}}
+
+{{- if $doc.Examples}}
+### Examples
+{{- range $doc.Examples}}
+
+{{.Name}}
+```bash
+{{.Data}}
+```
+{{- end}}
+{{- end}}
