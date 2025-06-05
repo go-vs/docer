@@ -35,6 +35,59 @@ func (p *Parser) parse(data any) []*Type {
 	return p.types
 }
 
+func (p *Parser) parseField(t reflect.Type) []*Field {
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return nil
+	}
+	res := make([]*Field, 0)
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if f.Anonymous {
+			fields := p.parseField(f.Type)
+			res = append(res, fields...)
+			continue
+		}
+		tag := f.Tag.Get(p.tagAsName)
+		if tag == "" {
+			continue
+		}
+		field := &Field{
+			Name:        tag,
+			Type:        "",
+			Required:    false,
+			Ref:         "",
+			Description: "",
+		}
+		subT := f.Type
+		k := subT.Kind()
+		if k == reflect.Ptr {
+			subT = subT.Elem()
+			k = subT.Kind()
+		}
+		switch k {
+		case reflect.Struct:
+			sub := p.parseStruct(subT)
+			field.Type = "object"
+			field.Ref = sub.Name
+		case reflect.Slice, reflect.Array:
+			sub := p.parseStruct(subT.Elem())
+			if sub != nil {
+				field.Ref = sub.Name
+				field.Type = "array of object"
+			} else {
+				field.Type = "array of " + subT.Elem().String()
+			}
+		default:
+			field.Type = subT.String()
+		}
+		res = append(res, field)
+	}
+	return res
+}
+
 func (p *Parser) parseStruct(data reflect.Type) *Type {
 	if data.Kind() == reflect.Ptr {
 		data = data.Elem()
@@ -54,45 +107,6 @@ func (p *Parser) parseStruct(data reflect.Type) *Type {
 	}
 	p.memType[data.Name()] = t
 	p.types = append(p.types, t)
-
-	for i := 0; i < data.NumField(); i++ {
-		f := data.Field(i)
-		fmt.Println("-", data.Name()+"."+f.Name, f.Type.Kind())
-		jsonTag := f.Tag.Get(p.tagAsName)
-		if jsonTag == "" {
-			continue
-		}
-		field := &Field{
-			Name:        jsonTag,
-			Type:        "",
-			Required:    false,
-			Ref:         "",
-			Description: "",
-		}
-		subT := f.Type
-		k := subT.Kind()
-		if k == reflect.Ptr {
-			subT = subT.Elem()
-			k = subT.Kind()
-		}
-
-		switch k {
-		case reflect.Struct:
-			sub := p.parseStruct(subT)
-			field.Type = "object"
-			field.Ref = sub.Name
-		case reflect.Slice, reflect.Array:
-			sub := p.parseStruct(subT.Elem())
-			if sub != nil {
-				field.Ref = sub.Name
-				field.Type = "array of object"
-			} else {
-				field.Type = "array of " + subT.Elem().String()
-			}
-		default:
-			field.Type = subT.String()
-		}
-		t.Fields = append(t.Fields, field)
-	}
+	t.Fields = p.parseField(data)
 	return t
 }
