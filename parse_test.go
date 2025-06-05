@@ -1,15 +1,16 @@
 package docer
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type mock struct {
-	ID  string   `json:"id"`
-	Age int      `json:"age"`
-	A   *mockA   `json:"a"`
-	Bs  []*mockB `json:"bs"`
+	mockB
+	ID string   `json:"id"`
+	A  *mockA   `json:"a"`
+	AS []*mockA `json:"as"`
 }
 
 type mockA struct {
@@ -21,6 +22,7 @@ type mockB struct {
 }
 
 func TestParse(t *testing.T) {
-	doc := New(mock{})
+	doc := New().HasBody(mock{}, "json")
 	assert.NoError(t, doc.JSON("test.json"))
+	assert.NoError(t, doc.Generate("test.md"))
 }
